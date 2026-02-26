@@ -1,0 +1,35 @@
+name: Feature
+description: 신규 기능 요청
+title: "[Feature] "
+labels: ["type:feature", "status:todo"]
+body:
+  - type: input
+    id: goal
+    attributes:
+      label: 목표
+      placeholder: 사용자 관점에서 무엇이 달라지는지 1문장
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 완료조건(AC)
+      placeholder: |
+        - [ ] 조건 1
+        - [ ] 조건 2
+        - [ ] 조건 3
+    validations:
+      required: true
+
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: 제외범위
+      placeholder: 이번 작업에서 하지 않을 것
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: 리스크
+      placeholder: 기능/성능/보안/운영 리스크

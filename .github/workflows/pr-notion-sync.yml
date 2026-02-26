@@ -1,0 +1,71 @@
+name: pr-notion-sync
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, closed]
+
+permissions:
+  pull-requests: read
+  issues: read
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract issue number from PR body (Closes #123)
+        id: issue
+        run: |
+          BODY=$(jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH")
+          ISSUE_NUM=$(echo "$BODY" | grep -oiE '(closes|fixes|resolves)\s+#([0-9]+)' | head -n1 | grep -oE '[0-9]+' || true)
+          echo "issue_num=$ISSUE_NUM" >> $GITHUB_OUTPUT
+
+      - name: Skip if no linked issue
+        if: steps.issue.outputs.issue_num == ''
+        run: echo "No linked issue found in PR body."
+
+      - name: Read issue body for notion_page_id
+        if: steps.issue.outputs.issue_num != ''
+        id: marker
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ISSUE_NUM="${{ steps.issue.outputs.issue_num }}"
+          RESP=$(curl -sS \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/$ISSUE_NUM")
+          ISSUE_BODY=$(echo "$RESP" | jq -r '.body // ""')
+          PAGE_ID=$(echo "$ISSUE_BODY" | sed -n 's/.*notion_page_id:\s*\([a-zA-Z0-9-]*\).*/\1/p' | head -n1)
+          echo "page_id=$PAGE_ID" >> $GITHUB_OUTPUT
+
+      - name: Update Notion PR URL + Status
+        if: steps.marker.outputs.page_id != ''
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+        run: |
+          PAGE_ID="${{ steps.marker.outputs.page_id }}"
+          PR_URL=$(jq -r '.pull_request.html_url' "$GITHUB_EVENT_PATH")
+          ACTION=$(jq -r '.action' "$GITHUB_EVENT_PATH")
+          MERGED=$(jq -r '.pull_request.merged // false' "$GITHUB_EVENT_PATH")
+
+          STATUS="In Progress"
+          if [ "$ACTION" = "ready_for_review" ]; then STATUS="QA"; fi
+          if [ "$ACTION" = "closed" ] && [ "$MERGED" = "true" ]; then STATUS="Done"; fi
+          if [ "$ACTION" = "closed" ] && [ "$MERGED" != "true" ]; then STATUS="Blocked"; fi
+
+          BODY=$(jq -n \
+            --arg pr "$PR_URL" \
+            --arg status "$STATUS" \
+            '{
+              properties: {
+                "GitHub PR URL": { url: $pr },
+                Status: { select: { name: $status } }
+              }
+            }')
+
+          curl -sS -X PATCH "https://api.notion.com/v1/pages/$PAGE_ID" \
+            -H "Authorization: Bearer $NOTION_TOKEN" \
+            -H "Content-Type: application/json" \
+            -H "Notion-Version: 2022-06-28" \
+            -d "$BODY" >/dev/null
