@@ -28,9 +28,11 @@ void main() {
 
     expect(find.text('접속 이메일: user@example.com'), findsOneWidget);
     expect(find.text('홈 화면에 오신 것을 환영합니다.'), findsOneWidget);
+    expect(find.text('로그아웃'), findsNothing);
 
-    await tester.tap(find.byIcon(Icons.menu));
+    await tester.tap(find.text('설정'));
     await tester.pumpAndSettle();
+    expect(find.text('설정 화면 초안입니다.'), findsOneWidget);
     await tester.tap(find.text('로그아웃'));
     await tester.pumpAndSettle();
 

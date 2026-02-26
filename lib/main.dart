@@ -152,44 +152,100 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _MainScreen(email: email, onLogout: onLogout);
+  }
+}
+
+class _MainScreen extends StatefulWidget {
+  const _MainScreen({required this.email, required this.onLogout});
+
+  final String email;
+  final VoidCallback onLogout;
+
+  @override
+  State<_MainScreen> createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<_MainScreen> {
+  int _selectedIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final tabs = [
+      _HomeTab(email: widget.email),
+      _SettingsTab(onLogout: widget.onLogout),
+    ];
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('홈'),
-        actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.menu),
-            onSelected: (value) {
-              if (value == 'logout') {
-                onLogout();
-              }
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem<String>(
-                value: 'logout',
-                child: Text('로그아웃'),
-              ),
-            ],
+        title: Text(_selectedIndex == 0 ? '홈' : '설정'),
+      ),
+      body: SafeArea(child: tabs[_selectedIndex]),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: '홈'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: '설정'),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeTab extends StatelessWidget {
+  const _HomeTab({required this.email});
+
+  final String email;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '접속 이메일: $email',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '홈 화면에 오신 것을 환영합니다.',
+            style: Theme.of(context).textTheme.bodyLarge,
           ),
         ],
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '접속 이메일: $email',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '홈 화면에 오신 것을 환영합니다.',
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-            ],
+    );
+  }
+}
+
+class _SettingsTab extends StatelessWidget {
+  const _SettingsTab({required this.onLogout});
+
+  final VoidCallback onLogout;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '설정 화면 초안입니다.',
+            style: Theme.of(context).textTheme.bodyLarge,
           ),
-        ),
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: onLogout,
+            child: const Text('로그아웃'),
+          ),
+        ],
       ),
     );
   }
