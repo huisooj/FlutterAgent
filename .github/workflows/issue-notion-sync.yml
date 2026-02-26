@@ -31,7 +31,7 @@ jobs:
           [[ "$LABELS" == *"type:chore"* ]] && TYPE="chore"
 
           STATUS="Todo"
-          [[ "$LABELS" == *"status:in-progress"* ]] && STATUS="In Progress"
+          [[ "$LABELS" == *"status:develop"* ]] && STATUS="Develop"
           [[ "$LABELS" == *"status:qa"* ]] && STATUS="QA"
           [[ "$LABELS" == *"status:done"* ]] && STATUS="Done"
           [[ "$LABELS" == *"status:blocked"* ]] && STATUS="Blocked"
