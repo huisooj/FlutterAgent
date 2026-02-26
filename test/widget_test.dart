@@ -4,6 +4,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_agent/main.dart';
 
 void main() {
+  testWidgets('Login fails when password is empty', (WidgetTester tester) async {
+    await tester.pumpWidget(const MyApp());
+
+    await tester.enterText(find.byType(TextField).first, 'user@example.com');
+    await tester.tap(find.text('로그인'));
+    await tester.pump();
+
+    expect(find.text('비밀번호를 입력해 주세요.'), findsOneWidget);
+    expect(find.text('환영합니다'), findsOneWidget);
+    expect(find.textContaining('접속 이메일:'), findsNothing);
+  });
+
   testWidgets('Login to home and logout flow works', (WidgetTester tester) async {
     await tester.pumpWidget(const MyApp());
 

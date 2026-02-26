@@ -108,9 +108,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   FilledButton(
                     onPressed: () {
                       final email = _emailController.text.trim();
+                      final password = _passwordController.text;
                       if (email.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('이메일을 입력해 주세요.')),
+                        );
+                        return;
+                      }
+                      if (password.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('비밀번호를 입력해 주세요.')),
                         );
                         return;
                       }
