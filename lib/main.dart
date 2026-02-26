@@ -4,8 +4,27 @@ void main() {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  String? _signedInEmail;
+
+  void _onLogin(String email) {
+    setState(() {
+      _signedInEmail = email;
+    });
+  }
+
+  void _onLogout() {
+    setState(() {
+      _signedInEmail = null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,13 +34,17 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF176FF2)),
       ),
-      home: const LoginScreen(),
+      home: _signedInEmail == null
+          ? LoginScreen(onLogin: _onLogin)
+          : HomeScreen(email: _signedInEmail!, onLogout: _onLogout),
     );
   }
 }
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, required this.onLogin});
+
+  final ValueChanged<String> onLogin;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -83,7 +106,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 18),
                   FilledButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      final email = _emailController.text.trim();
+                      if (email.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('이메일을 입력해 주세요.')),
+                        );
+                        return;
+                      }
+                      widget.onLogin(email);
+                    },
                     child: const Text('로그인'),
                   ),
                   const SizedBox(height: 8),
@@ -98,6 +130,57 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key, required this.email, required this.onLogout});
+
+  final String email;
+  final VoidCallback onLogout;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('홈'),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.menu),
+            onSelected: (value) {
+              if (value == 'logout') {
+                onLogout();
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem<String>(
+                value: 'logout',
+                child: Text('로그아웃'),
+              ),
+            ],
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '접속 이메일: $email',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '홈 화면에 오신 것을 환영합니다.',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+            ],
           ),
         ),
       ),
