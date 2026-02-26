@@ -53,6 +53,56 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  String? _emailError;
+  String? _passwordError;
+  bool _isSubmitting = false;
+
+  bool _isValidEmail(String value) {
+    return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value);
+  }
+
+  Future<void> _submit() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    setState(() {
+      _emailError = null;
+      _passwordError = null;
+    });
+
+    var hasError = false;
+    if (email.isEmpty) {
+      _emailError = '이메일을 입력해 주세요.';
+      hasError = true;
+    } else if (!_isValidEmail(email)) {
+      _emailError = '올바른 이메일 형식을 입력해 주세요.';
+      hasError = true;
+    }
+
+    if (password.isEmpty) {
+      _passwordError = '비밀번호를 입력해 주세요.';
+      hasError = true;
+    }
+
+    if (hasError) {
+      if (mounted) {
+        setState(() {});
+      }
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _isSubmitting = false;
+    });
+    widget.onLogin(email);
+  }
 
   @override
   void dispose() {
@@ -93,7 +143,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       labelText: '이메일',
                       hintText: 'name@example.com',
                       border: OutlineInputBorder(),
-                    ),
+                    ).copyWith(errorText: _emailError),
                   ),
                   const SizedBox(height: 12),
                   TextField(
@@ -102,28 +152,18 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: const InputDecoration(
                       labelText: '비밀번호',
                       border: OutlineInputBorder(),
-                    ),
+                    ).copyWith(errorText: _passwordError),
                   ),
                   const SizedBox(height: 18),
                   FilledButton(
-                    onPressed: () {
-                      final email = _emailController.text.trim();
-                      final password = _passwordController.text;
-                      if (email.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('이메일을 입력해 주세요.')),
-                        );
-                        return;
-                      }
-                      if (password.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('비밀번호를 입력해 주세요.')),
-                        );
-                        return;
-                      }
-                      widget.onLogin(email);
-                    },
-                    child: const Text('로그인'),
+                    onPressed: _isSubmitting ? null : _submit,
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('로그인'),
                   ),
                   const SizedBox(height: 8),
                   TextButton(
@@ -218,16 +258,35 @@ class _HomeTab extends StatelessWidget {
             '홈 화면에 오신 것을 환영합니다.',
             style: Theme.of(context).textTheme.bodyLarge,
           ),
+          const SizedBox(height: 24),
+          _SummaryCard(
+            title: '최근 활동',
+            content: '최근 로그인: 오늘',
+            icon: Icons.history,
+          ),
+          const SizedBox(height: 12),
+          _SummaryCard(
+            title: '빠른 작업',
+            content: '설정 탭에서 환경을 조정해 보세요.',
+            icon: Icons.bolt,
+          ),
         ],
       ),
     );
   }
 }
 
-class _SettingsTab extends StatelessWidget {
+class _SettingsTab extends StatefulWidget {
   const _SettingsTab({required this.onLogout});
 
   final VoidCallback onLogout;
+
+  @override
+  State<_SettingsTab> createState() => _SettingsTabState();
+}
+
+class _SettingsTabState extends State<_SettingsTab> {
+  bool _notificationEnabled = true;
 
   @override
   Widget build(BuildContext context) {
@@ -240,12 +299,67 @@ class _SettingsTab extends StatelessWidget {
             '설정 화면 초안입니다.',
             style: Theme.of(context).textTheme.bodyLarge,
           ),
+          const SizedBox(height: 20),
+          SwitchListTile(
+            value: _notificationEnabled,
+            contentPadding: EdgeInsets.zero,
+            title: const Text('알림 받기'),
+            onChanged: (value) {
+              setState(() {
+                _notificationEnabled = value;
+              });
+            },
+          ),
+          const Divider(height: 24),
+          const ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text('앱 버전'),
+            trailing: Text('0.1.0'),
+          ),
           const SizedBox(height: 16),
           FilledButton(
-            onPressed: onLogout,
+            onPressed: widget.onLogout,
             child: const Text('로그아웃'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({
+    required this.title,
+    required this.content,
+    required this.icon,
+  });
+
+  final String title;
+  final String content;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 6),
+                  Text(content, style: Theme.of(context).textTheme.bodyMedium),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

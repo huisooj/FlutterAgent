@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   draft_pr:
-    if: github.event.label.name == 'status:in-progress'
+    if: github.event.label.name == 'status:develop'
     runs-on: ubuntu-latest
     env:
       BRANCH: auto/issue-${{ github.event.issue.number }}
