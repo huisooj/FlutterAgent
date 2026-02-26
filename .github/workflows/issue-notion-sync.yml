@@ -34,6 +34,9 @@ jobs:
           [[ "$ISSUE_STATE" == "closed" ]] && STATUS="Done"
 
           PAGE_ID=$(echo "$ISSUE_BODY" | sed -n 's/.*notion_page_id:\s*\([a-zA-Z0-9-]*\).*/\1/p' | head -n1)
+          if [ "$PAGE_ID" = "null" ]; then
+            PAGE_ID=""
+          fi
 
           echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
           echo "issue_title<<EOF" >> $GITHUB_OUTPUT
@@ -52,6 +55,9 @@ jobs:
         run: |
           set -e
           PAGE_ID="${{ steps.meta.outputs.page_id }}"
+          if [ "$PAGE_ID" = "null" ]; then
+            PAGE_ID=""
+          fi
 
           PROPS=$(jq -n \
             --arg title "${{ steps.meta.outputs.issue_title }}" \
@@ -77,16 +83,34 @@ jobs:
               -H "Authorization: Bearer $NOTION_TOKEN" \
               -H "Content-Type: application/json" \
               -H "Notion-Version: 2022-06-28" \
-              -d "$BODY")
-            NEW_ID=$(echo "$RESP" | jq -r '.id')
+              -d "$BODY" \
+              -w '\n%{http_code}')
+            HTTP_CODE=$(echo "$RESP" | tail -n1)
+            RESP_BODY=$(echo "$RESP" | sed '$d')
+            if [ "$HTTP_CODE" -ge 300 ]; then
+              echo "::error::Notion create failed ($HTTP_CODE): $RESP_BODY"
+              exit 1
+            fi
+            NEW_ID=$(echo "$RESP_BODY" | jq -r '.id // empty')
+            if [ -z "$NEW_ID" ]; then
+              echo "::error::Notion create response missing page id: $RESP_BODY"
+              exit 1
+            fi
             echo "page_id=$NEW_ID" >> $GITHUB_OUTPUT
           else
             BODY=$(jq -n --argjson props "$PROPS" '{ properties: $props }')
-            curl -sS -X PATCH "https://api.notion.com/v1/pages/$PAGE_ID" \
+            RESP=$(curl -sS -X PATCH "https://api.notion.com/v1/pages/$PAGE_ID" \
               -H "Authorization: Bearer $NOTION_TOKEN" \
               -H "Content-Type: application/json" \
               -H "Notion-Version: 2022-06-28" \
-              -d "$BODY" >/dev/null
+              -d "$BODY" \
+              -w '\n%{http_code}')
+            HTTP_CODE=$(echo "$RESP" | tail -n1)
+            RESP_BODY=$(echo "$RESP" | sed '$d')
+            if [ "$HTTP_CODE" -ge 300 ]; then
+              echo "::error::Notion update failed ($HTTP_CODE): $RESP_BODY"
+              exit 1
+            fi
             echo "page_id=$PAGE_ID" >> $GITHUB_OUTPUT
           fi
 
@@ -98,7 +122,7 @@ jobs:
             const pageId = `${{ steps.notion.outputs.page_id }}`;
             let body = issue.body || "";
             if (body.includes("notion_page_id:")) {
-              body = body.replace(/notion_page_id:\s*[a-zA-Z0-9-]+/g, `notion_page_id: ${pageId}`);
+              body = body.replace(/notion_page_id:\s*(?:null|[a-zA-Z0-9-]+)/g, `notion_page_id: ${pageId}`);
             } else {
               body += `\n\n<!-- notion_page_id: ${pageId} -->`;
             }
