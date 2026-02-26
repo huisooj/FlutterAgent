@@ -13,14 +13,10 @@ jobs:
   draft_pr:
     if: github.event.label.name == 'status:in-progress'
     runs-on: ubuntu-latest
+    env:
+      BRANCH: auto/issue-${{ github.event.issue.number }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Create branch
-        run: |
-          BRANCH="auto/issue-${{ github.event.issue.number }}"
-          git checkout -b "$BRANCH"
-          echo "BRANCH=$BRANCH" >> $GITHUB_ENV
 
       - name: Add draft bootstrap file
         run: |
